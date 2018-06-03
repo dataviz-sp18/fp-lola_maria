@@ -1,0 +1,202 @@
+---
+title: "Income Disparities and Racial Segregation"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    theme: simplex
+    source_code: embed
+---
+
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(gridExtra)
+library(plotly)
+library(plyr)
+library(flexdashboard)
+library(stringr)
+library(ggmap) 
+library(leaflet)
+
+#working directory
+
+#setwd("~/Dropbox/Final paper/Flex")
+
+#Read csv
+ethnicity_tidy <- read.csv("ethnicity_tidy.csv")
+
+new_data_ethnicity_percent_tidy <- read.csv("new_data_ethnicity_percent_tidy.csv")
+
+race_tidy <- read.csv("race_tidy.csv")
+
+new_data_race_percent_tidy <- read.csv("new_data_race_percent_tidy.csv")
+```
+
+Introduction
+=======================================================================
+
+
+Having a clear picture of what segregation looks like in the Chicago area and its contiguous suburbs, is very important for decision makers and advocacy groups. Identifying disadvantaged populations and where they live, allows to design appropriate policies in order to improve the living situation of these minorities.The goal of our project is to provide an exploratory analysis where the viewer can interact with the visualizations and learn about the racial and ethnic segregation as well as of the income inequality in Chicago. 
+
+We do this using two approaches:  
+1. First, we explore income data by race and ethnicity to see the percentage of each group by income bracket, allowing us to have an idea of the income disparities present in Cook County and Chicago and to identify the most vulnerable populations in terms of income.  
+2. Second, to show the racial and ethnicity distribution and segregation, we analyze Census demographic data for seven bordering neighborhoods of the West side of the city that serve as a perfect example of this problem.   
+  
+    
+  
+  
+  
+For the income analysis we obtained the data from the 2010 United State Census at the Cook County level. The income data is at the Household (HH) level and we constructed a data set in R showing the percentages of HH in each income bracket divided either by race or by ethnicity, as well as the total number of HH. For the analysis we focused only on the brackets above the median income for the county, which is approximately $55,251 a year.
+
+It is important to mention that the United States Census demographic data identifies people by their race (African American, White, Asian, Native American, etc.) and by ethnicity (Hispanic or not Hispanic). This distinction causes many statistical problems because Hispanics are many times misclassified into a race they don't necessarily belong to. An Hispanic might identify as "White" or as "other" or as two or more races and it complicates how the data are analysed.
+
+
+Income
+=======================================================================
+
+### Percentage of households with income above the median in Cook County
+
+```{r}
+above_median_HH <- read.csv("above_median_per.csv")
+
+
+above_median_HH$Race <- factor(above_median_HH$Race,
+                   levels = c('Asian', 'White', 'All', 'Hispanic', 'Other', 'Black'))
+
+inc_1 <- plot_ly(above_median_HH, x = ~Race, y = ~Percentage, type = 'bar',
+        marker = list(color = 'rgba(222,45,38,0.8)',
+                      line = list(color = I("black"),
+                                  width = 1.5))) %>%
+  layout(
+       xaxis = list(title = "Race"),
+        yaxis = list(title = "Percentage of HH"))
+
+
+ inc_1
+```
+
+### Percentage of HH with an income above the median by ethnicity in Cook County
+
+```{r}
+
+tidy_income_hisp <- read.csv("tidy_percent_pop_tot2_Hisp.csv")
+
+tidy_income_hisp$Income <- factor(tidy_income_hisp$Income,
+                   levels = c('$50,000 to $59,999', '$60,000 to $74,999', '$75,000 to $99,999', '$100,000 to $124,999', '$125,000 to $149,999', '$150,000 to $199,999', '$200,000 or more' ))
+
+inc_3 <- plot_ly(tidy_income_hisp, x = ~Percentage, y = ~Income, color = ~Race) %>%
+  layout(xaxis = list(title = ''), yaxis = list(title = ''), barmode = 'stack', margin = list(l = 150, r = 0, t = 40, b = 5), legend = list(orientation = "h",   
+                     xanchor = "center",
+                     x = 0.5))
+inc_3
+```
+
+### Percentage of HH with an income above the median by race in Cook County
+
+```{r}
+tidy_income_race_pop <- read.csv("tidy_percent_pop_tot2.csv")
+
+tidy_income_race_pop$Income <- factor(tidy_income_race_pop$Income,
+                   levels = c('$50,000 to $59,999', '$60,000 to $74,999', '$75,000 to $99,999', '$100,000 to $124,999', '$125,000 to $149,999', '$150,000 to $199,999', '$200,000 or more' ))
+
+inc_2 <- plot_ly(tidy_income_race_pop, x = ~Percentage, y = ~Income, color = ~Race) %>%
+  layout(xaxis = list(title = ''), yaxis = list(title = ''), barmode = 'stack', margin = list(l = 150, r = 0, t = 40, b = 5), legend = list(orientation = "h",   
+                     xanchor = "center",
+                     x = 0.5))
+inc_2
+```   
+    
+
+
+Neighborhoods
+=======================================================================
+
+Row {data-height=315}
+-------------------------------------
+
+The data for the demographic analysis was also obtained from the 2010 United States Census. We downloaded the information at a Census Tract level for the state of Illinois and filtered for the tracts that we were specifically interested in. Later, we manually constructed the data set at a neighborhood level so that we could compare the seven neighborhoods we are focusing in. The reason we chose these seven neighborhoods is because the West side of Chicago is known for the high level of racial/ethnicity segregation present in the area. This small sample of bordering neighborhoods are important because of the striking differences in populations within the area. 
+The seven neighborhoods are:   
+1. Austin  
+2. Belwood  
+3. Berwin  
+4. Cicero  
+5. Forest Park   
+6. Maywood  
+7. Oak Park  
+
+Row {data-height=600}
+-------------------------------------
+
+### Map
+
+```{r}
+chicago <- leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  addMarkers(lng=-87.784294, lat=41.885592, popup="Chicago west suburbs")
+
+chicago
+```
+
+Demographics
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+
+### Community population by ethnicity
+
+```{r}
+dem_1 <- ethnicity_tidy %>%
+  plot_ly(x = ~place, y = ~ ethnicity_tidy$Population, color = ~Ethnicity) %>%
+   layout(xaxis = list(
+           title = ""), margin = list(b = 70),
+         yaxis = list(title = "Population"))
+
+
+dem_1
+```
+
+
+### Community population by race
+
+```{r}
+dem_3 <- race_tidy %>%
+  plot_ly(x = ~place, y = ~ race_tidy$Population, color = ~Race) %>%
+   layout(xaxis = list(
+           title = ""), margin = list(b = 70),
+         yaxis = list(title = "Population"))
+
+
+dem_3
+```
+
+
+Row
+-----------------------------------------------------------------------
+
+### Ethnicity distribution within community
+
+```{r}
+dem_2 <- new_data_ethnicity_percent_tidy %>%
+plot_ly(x = ~Ethnicity, y = ~ new_data_ethnicity_percent_tidy$Percentage, color = ~place )%>%
+   layout(
+         yaxis = list(title = "Percentage of people"))
+
+dem_2
+```
+
+
+### Race distribution within community
+```{r}
+dem_4 <- new_data_race_percent_tidy %>%
+  plot_ly(x = ~Race, y = ~ new_data_race_percent_tidy$Percent, color = ~place )%>%
+   layout(
+         yaxis = list(title = "Percentage of people"))
+
+
+
+dem_4
+```
+
